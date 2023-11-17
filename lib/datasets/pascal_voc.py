@@ -19,12 +19,12 @@ import subprocess
 
 class pascal_voc(datasets.imdb):
     def __init__(self, image_set, year, devkit_path=None):
-        datasets.imdb.__init__(self, 'voc_' + year + '_' + image_set)
+        datasets.imdb.__init__(self, f'voc_{year}_{image_set}')
         self._year = year
         self._image_set = image_set
         self._devkit_path = self._get_default_path() if devkit_path is None \
-                            else devkit_path
-        self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
+                                else devkit_path
+        self._data_path = os.path.join(self._devkit_path, f'VOC{self._year}')
         self._classes = ('__background__', # always index 0
                          'aeroplane', 'bicycle', 'bird', 'boat',
                          'bottle', 'bus', 'car', 'cat', 'chair',
@@ -42,10 +42,12 @@ class pascal_voc(datasets.imdb):
                        'use_salt' : True,
                        'top_k'    : 2000}
 
-        assert os.path.exists(self._devkit_path), \
-                'VOCdevkit path does not exist: {}'.format(self._devkit_path)
-        assert os.path.exists(self._data_path), \
-                'Path does not exist: {}'.format(self._data_path)
+        assert os.path.exists(
+            self._devkit_path
+        ), f'VOCdevkit path does not exist: {self._devkit_path}'
+        assert os.path.exists(
+            self._data_path
+        ), f'Path does not exist: {self._data_path}'
 
     def image_path_at(self, i):
         """
@@ -59,8 +61,7 @@ class pascal_voc(datasets.imdb):
         """
         image_path = os.path.join(self._data_path, 'JPEGImages',
                                   index + self._image_ext)
-        assert os.path.exists(image_path), \
-                'Path does not exist: {}'.format(image_path)
+        assert os.path.exists(image_path), f'Path does not exist: {image_path}'
         return image_path
 
     def _load_image_set_index(self):
@@ -69,10 +70,10 @@ class pascal_voc(datasets.imdb):
         """
         # Example path to image set file:
         # self._devkit_path + /VOCdevkit2007/VOC2007/ImageSets/Main/val.txt
-        image_set_file = os.path.join(self._data_path, 'ImageSets', 'Main',
-                                      self._image_set + '.txt')
-        assert os.path.exists(image_set_file), \
-                'Path does not exist: {}'.format(image_set_file)
+        image_set_file = os.path.join(
+            self._data_path, 'ImageSets', 'Main', f'{self._image_set}.txt'
+        )
+        assert os.path.exists(image_set_file), f'Path does not exist: {image_set_file}'
         with open(image_set_file) as f:
             image_index = [x.strip() for x in f.readlines()]
         return image_index
@@ -81,7 +82,7 @@ class pascal_voc(datasets.imdb):
         """
         Return the default path where PASCAL VOC is expected to be installed.
         """
-        return os.path.join(datasets.ROOT_DIR, 'data', 'VOCdevkit' + self._year)
+        return os.path.join(datasets.ROOT_DIR, 'data', f'VOCdevkit{self._year}')
 
     def gt_roidb(self):
         """
@@ -133,17 +134,19 @@ class pascal_voc(datasets.imdb):
         return roidb
 
     def _load_selective_search_roidb(self, gt_roidb):
-        filename = os.path.abspath(os.path.join(self.cache_path, '..',
-                                                'selective_search_data',
-                                                self.name + '.mat'))
-        assert os.path.exists(filename), \
-               'Selective search data not found at: {}'.format(filename)
+        filename = os.path.abspath(
+            os.path.join(
+                self.cache_path, '..', 'selective_search_data', f'{self.name}.mat'
+            )
+        )
+        assert os.path.exists(
+            filename
+        ), f'Selective search data not found at: {filename}'
         raw_data = sio.loadmat(filename)['boxes'].ravel()
 
-        box_list = []
-        for i in xrange(raw_data.shape[0]):
-            box_list.append(raw_data[i][:, (1, 0, 3, 2)] - 1)
-
+        box_list = [
+            raw_data[i][:, (1, 0, 3, 2)] - 1 for i in xrange(raw_data.shape[0])
+        ]
         return self.create_roidb_from_box_list(box_list, gt_roidb)
 
     def selective_search_IJCV_roidb(self):
@@ -173,16 +176,22 @@ class pascal_voc(datasets.imdb):
         return roidb
 
     def _load_selective_search_IJCV_roidb(self, gt_roidb):
-        IJCV_path = os.path.abspath(os.path.join(self.cache_path, '..',
-                                                 'selective_search_IJCV_data',
-                                                 'voc_' + self._year))
-        assert os.path.exists(IJCV_path), \
-               'Selective search IJCV data not found at: {}'.format(IJCV_path)
+        IJCV_path = os.path.abspath(
+            os.path.join(
+                self.cache_path,
+                '..',
+                'selective_search_IJCV_data',
+                f'voc_{self._year}',
+            )
+        )
+        assert os.path.exists(
+            IJCV_path
+        ), f'Selective search IJCV data not found at: {IJCV_path}'
 
         top_k = self.config['top_k']
         box_list = []
         for i in xrange(self.num_images):
-            filename = os.path.join(IJCV_path, self.image_index[i] + '.mat')
+            filename = os.path.join(IJCV_path, f'{self.image_index[i]}.mat')
             raw_data = sio.loadmat(filename)
             box_list.append((raw_data['boxes'][:top_k, :]-1).astype(np.uint16))
 
@@ -193,7 +202,7 @@ class pascal_voc(datasets.imdb):
         Load image and bounding boxes info from XML file in the PASCAL VOC
         format.
         """
-        filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
+        filename = os.path.join(self._data_path, 'Annotations', f'{index}.xml')
         # print 'Loading: {}'.format(filename)
         def get_data_from_tag(node, tag):
             return node.getElementsByTagName(tag)[0].childNodes[0].data
@@ -260,13 +269,12 @@ class pascal_voc(datasets.imdb):
 
         path = os.path.join(os.path.dirname(__file__),
                             'VOCdevkit-matlab-wrapper')
-        cmd = 'cd {} && '.format(path)
-        cmd += '{:s} -nodisplay -nodesktop '.format(datasets.MATLAB)
+        cmd = f'cd {path} && ' + '{:s} -nodisplay -nodesktop '.format(datasets.MATLAB)
         cmd += '-r "dbstop if error; '
         cmd += 'voc_eval(\'{:s}\',\'{:s}\',\'{:s}\',\'{:s}\',{:d}); quit;"' \
-               .format(self._devkit_path, comp_id,
+                   .format(self._devkit_path, comp_id,
                        self._image_set, output_dir, int(rm_results))
-        print('Running:\n{}'.format(cmd))
+        print(f'Running:\n{cmd}')
         status = subprocess.call(cmd, shell=True)
 
     def evaluate_detections(self, all_boxes, output_dir):

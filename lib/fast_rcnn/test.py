@@ -34,8 +34,8 @@ def _get_image_blob(im):
     im_orig -= cfg.PIXEL_MEANS
 
     im_shape = im_orig.shape
-    im_size_min = np.min(im_shape[0:2])
-    im_size_max = np.max(im_shape[0:2])
+    im_size_min = np.min(im_shape[:2])
+    im_size_max = np.max(im_shape[:2])
 
     processed_ims = []
     im_scale_factors = []
@@ -183,14 +183,7 @@ def im_detect(net, im, boxes):
     net.blobs['rois'].reshape(*(blobs['rois'].shape))
     blobs_out = net.forward(data=blobs['data'].astype(np.float32, copy=False),
                             rois=blobs['rois'].astype(np.float32, copy=False))
-    if cfg.TEST.SVM:
-        # use the raw scores before softmax under the assumption they
-        # were trained as linear SVMs
-        scores = net.blobs['cls_score'].data
-    else:
-        # use softmax estimated probabilities
-        scores = blobs_out['cls_prob']
-
+    scores = net.blobs['cls_score'].data if cfg.TEST.SVM else blobs_out['cls_prob']
     if cfg.TEST.BBOX_REG:
         # Apply bounding-box regression deltas
         box_deltas = blobs_out['bbox_pred']
